@@ -1,81 +1,65 @@
-import React, { Component } from "react";
+import React, { useRef, useState } from "react";
 import "./ResponseCheck.css";
 
-class ResponseCheck extends Component {
-  state = {
-    state: "waiting",
-    message: "클릭해서 시작하세요.",
-    result: [],
+const ResponseCheck = () => {
+  const [state, setState] = useState("waiting");
+  const [message, setMessage] = useState("클릭해서 시작하세요.");
+  const [result, setResult] = useState([]);
+
+  const timeout = useRef(null); // 값이 바뀌어도 렌더링하고 싶지 않을 때에는 useRef 를 사용!
+  const startTime = useRef();
+  const endTime = useRef();
+
+  const onReset = () => {
+    setState("waiting");
+    setMessage("클릭해서 시작하세요.");
+    setResult([]);
   };
 
-  timeout; // 성급하게 클릭했을 때 타임아웃을 종료하기 위한 변수
-  startTime; // 색이 변한 시점을 저장하는 변수
-  endTime;
-
-  onClickScreen = () => {
-    const { state, message, result } = this.state;
+  const onClickScreen = () => {
     if (state === "waiting") {
-      this.setState({
-        state: "ready",
-        message: "초록색이 되면 클릭하세요.",
-      });
+      setState("ready");
+      setMessage("초록색이 되면 클릭하세요.");
 
-      this.timeout = setTimeout(() => {
-        this.setState({
-          state: "now",
-          message: "지금 클릭!",
-        });
-        this.startTime = new Date(); // 초록색 변한 시점
+      // useRef를 사용하면 변수 뒤에 .current 를 붙여주어야 함
+      timeout.current = setTimeout(() => {
+        setState("now");
+        setMessage("지금 클릭!");
+        startTime.current = new Date(); // 초록색 변한 시점
       }, Math.floor(Math.random() * 1000 + 2000)); // 2~3 초 사이의 랜덤 값
     } else if (state === "ready") {
       // 성급하게 클릭
-      clearTimeout(this.timeout); // 타임아웃 빠져나가기
-      this.setState({
-        state: "waiting",
-        message: "너무 성급하시군요! 초록색이 된 후에 클릭하세요.",
-      });
+      clearTimeout(timeout.current); // 타임아웃 빠져나가기
+      setState("waiting");
+      setMessage("너무 성급하시군요! 초록색이 된 후에 클릭하세요.");
     } else if (state === "now") {
       // 사용자가 초록색 된 이후 클릭하면 반응속도 체크
-      this.endTime = new Date(); // 초록색 변한 이후 클릭한 시점
-      this.setState((prev) => {
-        return {
-          state: "waiting",
-          message: "클릭해서 시작하세요.",
-          result: [...prev.result, this.endTime - this.startTime],
-        };
+      endTime.current = new Date(); // 초록색 변한 이후 클릭한 시점
+      setState("waiting");
+      setMessage("클릭해서 시작하세요.");
+      setResult((prev) => {
+        return [...prev, endTime.current - startTime.current];
       });
     }
   };
 
-  onReset = () => {
-    this.setState({
-      state: "waiting",
-      message: "클릭해서 시작하세요.",
-      result: [],
-    });
-  };
-
-  renderAverage = () => {
-    const { result } = this.state;
+  const renderAverage = () => {
     return result.length === 0 ? null : (
       <>
         <div>평균시간 :{result.reduce((a, c) => a + c) / result.length}ms</div>
-        <button onClick={this.onReset}>리셋</button>
+        <button onClick={onReset}>리셋</button>
       </>
     );
   };
 
-  render() {
-    const { state, message } = this.state;
-    return (
-      <>
-        <div id="screen" className={state} onClick={this.onClickScreen}>
-          {message}
-        </div>
-        {this.renderAverage()}
-      </>
-    );
-  }
-}
+  return (
+    <>
+      <div id="screen" className={state} onClick={onClickScreen}>
+        {message}
+      </div>
+      {renderAverage()}
+    </>
+  );
+};
 
 export default ResponseCheck;
